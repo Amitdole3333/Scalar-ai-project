@@ -1,0 +1,51 @@
+# ══════════════════════════════════════════════════
+# Files excluded from both GitHub AND HF Spaces deploy
+# (matches _deploy.py SKIP list exactly)
+# ══════════════════════════════════════════════════
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ── Hackathon source docs (not part of the environment) ──
+Meta Hackathon Problem Statement.pdf
+Meta OpenEnv Hackathon- Guidelines.pdf
+problem_statement.txt
+guidelines.txt
+
+# ── Generated/temp files ──
+Implementation_Plan.pdf
+Implementation_Plan.md
+_deploy.py
+_make_pdf.py
+_pdf1.txt
+_pdf2.txt
+results.json
+
+# ── Log files ──
+*.log
+inference_stderr.log
+live_test.log
+
+# ── Misc ──
+env/sample.gitignore

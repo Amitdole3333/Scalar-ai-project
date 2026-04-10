@@ -1,0 +1,76 @@
+task_id: hospital-er-triage
+task_name: "Hospital Emergency Room Triage and Resource Management"
+version: "1.0.0"
+tags:
+  - openenv
+description: >
+  An OpenEnv-compatible AI training environment that simulates a realistic
+  hospital emergency room. The agent must prioritize patients, manage queues,
+  allocate doctors/beds/ambulances, handle dynamic conditions and uncertainty,
+  and provide explainable decisions across 12 real-world challenge problems.
+
+authors:
+  - name: "AI Hackathon Team"
+
+environment:
+  module: env.environment
+  class: HospitalEnv
+  init_kwargs:
+    seed: 42
+
+tasks:
+  - name: easy
+    difficulty: easy
+    description: "2 patients, clear critical case, no resource conflict"
+    max_steps: 3
+
+  - name: medium
+    difficulty: medium
+    description: "4 patients, moderate ambiguity, limited doctors"
+    max_steps: 5
+
+  - name: hard
+    difficulty: hard
+    description: "6+ patients, resource conflict, dynamic changes, incomplete info"
+    max_steps: 6
+
+evaluation:
+  grader:
+    module: env.grader
+    class: Grader
+    method: grade
+  metrics:
+    - name: total_score
+      range: [0.0, 1.0]
+      description: "Weighted composite of all rubric categories"
+    - name: priority_score
+      range: [0.0, 1.0]
+      weight: 0.30
+    - name: doctor_score
+      range: [0.0, 1.0]
+      weight: 0.25
+    - name: critical_handling_score
+      range: [0.0, 1.0]
+      weight: 0.20
+    - name: ambulance_score
+      range: [0.0, 1.0]
+      weight: 0.10
+    - name: transfer_score
+      range: [0.0, 1.0]
+      weight: 0.05
+    - name: explanation_score
+      range: [0.0, 1.0]
+      weight: 0.10
+
+inference:
+  script: inference.py
+  default_model: Qwen/Qwen2.5-72B-Instruct
+  env_vars:
+    - HF_TOKEN
+    - API_BASE_URL
+    - MODEL_NAME
+
+docker:
+  dockerfile: Dockerfile
+  build_context: .
+  run_cmd: "python inference.py"
