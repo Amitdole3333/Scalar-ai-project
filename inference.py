@@ -916,9 +916,19 @@ def main():
 
     # Write results to file for reproducibility
     output_path = "results.json"
-    with open(output_path, "w") as f:
-        json.dump(results, f, indent=2)
-    print(f"\nDetailed results saved to {output_path}", file=sys.stderr)
+    try:
+        with open(output_path, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"\nDetailed results saved to {output_path}", file=sys.stderr)
+    except PermissionError:
+        # Docker containers may have read-only app directories
+        fallback = os.path.join("/tmp", "results.json")
+        try:
+            with open(fallback, "w") as f:
+                json.dump(results, f, indent=2)
+            print(f"\nDetailed results saved to {fallback}", file=sys.stderr)
+        except Exception:
+            print("\nCould not save results.json (read-only filesystem)", file=sys.stderr)
 
 
 if __name__ == "__main__":
