@@ -752,14 +752,14 @@ def run_task(
                 final_grade = info.get("final_grade")
                 break
 
-        # Compute score in [0, 1]
-        score = final_grade["total_score"] if final_grade else 0.0
-        score = min(max(score, 0.0), 1.0)
-        success = score > 0.0
+        # Compute score strictly in (0, 1)
+        score = final_grade["total_score"] if final_grade else 0.01
+        score = min(max(score, 0.01), 0.99)
+        success = score > 0.01  # Considering anything above minimum a 'success' attempt
 
     except Exception as e:
         print(f"[ERROR] Task {task_name} failed: {e}", file=sys.stderr, flush=True)
-        score = 0.0
+        score = 0.01
         success = False
 
     finally:

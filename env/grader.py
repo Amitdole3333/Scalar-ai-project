@@ -184,6 +184,9 @@ class Grader:
             + WEIGHT_EXPLANATION * explanation_score
         )
 
+        # Clamping to strictly (0, 1) to pass OpenEnv validation
+        total = max(0.01, min(0.99, total))
+
         return GradeResult(
             total_score=total,
             priority_score=priority_score,
