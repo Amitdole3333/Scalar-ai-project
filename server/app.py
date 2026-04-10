@@ -20,6 +20,9 @@ import threading
 import traceback
 from urllib.parse import parse_qs, urlparse
 
+# Add parent directory to path so we can import 'env'
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Import the environment
 from env import HospitalEnv
 

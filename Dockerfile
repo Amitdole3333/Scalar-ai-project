@@ -27,4 +27,4 @@ USER user
 
 # Default command: web server for HF Spaces (port 7860)
 # For CLI inference, run: python inference.py
-CMD ["python", "app.py"]
+CMD ["python", "server/app.py"]

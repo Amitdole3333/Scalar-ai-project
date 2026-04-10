@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "hospital-er-triage"
@@ -11,8 +11,12 @@ requires-python = ">=3.11"
 dependencies = [
     "openai>=1.0.0",
     "pyyaml>=6.0",
-    "pydantic>=2.0.0"
+    "pydantic>=2.0.0",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "server.app:main"
 
 [project.optional-dependencies]
 dev = [
