@@ -1,17 +1,32 @@
 """Minimal web interface for HF Spaces (port 7860).
 
 This keeps the Docker container alive so HF Spaces shows 'Running'.
-The actual inference runs via CLI: python inference.py
+It also exposes OpenEnv-compatible HTTP API endpoints:
+  POST /reset   — reset the environment (accepts JSON body with task_name)
+  POST /step    — take one step (accepts JSON body with action dict)
+  POST /state   — return current environment state
+  POST /close   — close the environment
+  GET  /        — dashboard HTML page
+
+The actual inference can also run via CLI: python inference.py
 """
 
 import http.server
 import json
 import os
 import subprocess
+import sys
 import threading
+import traceback
 from urllib.parse import parse_qs, urlparse
 
+# Import the environment
+from env import HospitalEnv
+
 PORT = int(os.environ.get("PORT", 7860))
+
+# Shared environment instance (thread-safe for single-threaded http.server)
+_env = HospitalEnv(seed=42)
 
 
 HTML_PAGE = """<!DOCTYPE html>
@@ -172,13 +187,35 @@ HTML_PAGE = """<!DOCTYPE html>
 """
 
 
-class Handler(http.server.SimpleHTTPRequestHandler):
+def _send_json(handler, data, status=200):
+    """Helper to send a JSON response."""
+    body = json.dumps(data).encode("utf-8")
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+
+        # API endpoints also accept GET for convenience
+        if path == "/state":
+            try:
+                state = _env.state()
+                _send_json(self, state)
+            except Exception as e:
+                _send_json(self, {"error": str(e)}, status=500)
+            return
+
+        # Default: serve the dashboard HTML
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
 
-        # Inject live env var status
         api_base = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
         model = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
         token_status = "SET" if os.environ.get("HF_TOKEN") else "MISSING"
@@ -186,14 +223,67 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         page = HTML_PAGE.replace("ENDPOINT", api_base).replace("MODEL", model).replace("CONFIGURED", token_status)
         self.wfile.write(page.encode("utf-8"))
 
+    def do_POST(self):
+        """Handle OpenEnv API POST requests."""
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+
+        # Read request body
+        content_length = int(self.headers.get("Content-Length", 0))
+        raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+
+        try:
+            body = json.loads(raw_body) if raw_body else {}
+        except json.JSONDecodeError:
+            body = {}
+
+        try:
+            if path == "/reset":
+                task_name = body.get("task_name", body.get("task", "easy"))
+                obs = _env.reset(task_name=task_name)
+                _send_json(self, obs)
+
+            elif path == "/step":
+                action_dict = body.get("action", body)
+                obs, reward, done, info = _env.step(action_dict)
+                _send_json(self, {
+                    "observation": obs,
+                    "reward": reward,
+                    "done": done,
+                    "info": info,
+                })
+
+            elif path == "/state":
+                state = _env.state()
+                _send_json(self, state)
+
+            elif path == "/close":
+                _env.close()
+                _send_json(self, {"status": "closed"})
+
+            elif path == "/":
+                # Root POST — treat as reset (OpenEnv compatibility)
+                task_name = body.get("task_name", body.get("task", "easy"))
+                obs = _env.reset(task_name=task_name)
+                _send_json(self, obs)
+
+            else:
+                _send_json(self, {"error": f"Unknown endpoint: {path}"}, status=404)
+
+        except Exception as e:
+            traceback.print_exc(file=sys.stderr)
+            _send_json(self, {"error": str(e)}, status=500)
+
     def log_message(self, format, *args):
-        pass  # Suppress access logs
+        # Log to stderr for debugging (but keep it minimal)
+        print(f"[HTTP] {args[0]}", file=sys.stderr, flush=True)
 
 
 def main():
     print(f"Starting web server on port {PORT}...")
     server = http.server.HTTPServer(("0.0.0.0", PORT), Handler)
     print(f"Server running at http://0.0.0.0:{PORT}")
+    print(f"OpenEnv API endpoints: POST /reset, /step, /state, /close")
     server.serve_forever()
 
 
