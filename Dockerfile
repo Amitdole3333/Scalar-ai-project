@@ -25,5 +25,6 @@ ENV MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"
 
 USER user
 
-# Default command: run inference (CLI mode)
-CMD ["python", "inference.py"]
+# Default command: web server for HF Spaces (port 7860)
+# For CLI inference, run: python inference.py
+CMD ["python", "app.py"]
